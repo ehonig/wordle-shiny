@@ -37,10 +37,15 @@ check_wordle <- function(guess, soln, colors_wordle = list(
   gold = "#b49e3b")
 ) {
   pos <- guess == soln
-  soln[pos] <- colors_wordle$green        # green
-  chr <- guess %in% soln
-  soln[chr] <- colors_wordle$gold         # gold
-  soln[!pos & !chr] <- colors_wordle$gray # gray
+  soln[pos] <- colors_wordle$green                # green
+  chr <- sapply(unique(soln), function(i) which(i == guess))
+  chr <- chr[lengths(chr) != 0]
+  if (length(chr) != 0) {
+    chr_freq <- sapply(unique(soln), function(i) sum(i == soln))
+    set_gold <- sapply(names(chr), function(i) chr[[i]][chr_freq[[i]]])
+    soln[set_gold] <- colors_wordle$gold            # gold
+  }
+  soln[nchar(soln) == 1] <- colors_wordle$gray    # gray
   soln
 }
 
@@ -118,7 +123,7 @@ server <- function(input, output) {
     if (gameOver()) {
       guess_num <<- 0L
       guesses <<- character(6)
-      soln <<- sample(os, 1)
+      soln <<- get_chrs(sample(os, 1))
       gameOver(FALSE)
       renderText({"Generating a new woRdle"})
     } else 
