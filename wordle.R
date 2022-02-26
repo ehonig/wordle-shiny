@@ -1,5 +1,4 @@
 ## Built by Edouardo Honig
-## 02/24/2022
 
 library(shiny)
 
@@ -40,10 +39,10 @@ check_wordle <- function(guess, soln, colors_wordle = list(
   soln[pos] <- colors_wordle$green                # green
   chr <- sapply(unique(soln), function(i) which(i == guess))
   chr <- chr[lengths(chr) != 0]
-  if (length(chr) != 0) {
+  if (length(chr) != 0) {                         # gold
     chr_freq <- sapply(unique(soln), function(i) sum(i == soln))
     set_gold <- sapply(names(chr), function(i) chr[[i]][chr_freq[[i]]])
-    soln[set_gold] <- colors_wordle$gold            # gold
+    soln[set_gold] <- colors_wordle$gold          
   }
   soln[nchar(soln) == 1] <- colors_wordle$gray    # gray
   soln
@@ -86,7 +85,7 @@ $(function() {
 '
 
 ui <- fluidPage(
-  tags$style('.container-fluid {
+  tags$style('body {
                              background-color: #121312;
               }'),
   tags$head(tags$script(HTML(jscode_enter))),
@@ -125,12 +124,16 @@ server <- function(input, output) {
       guesses <<- character(6)
       soln <<- get_chrs(sample(os, 1))
       gameOver(FALSE)
-      renderText({"Generating a new woRdle"})
+      renderText({"New woRdle generated"})
     } else 
       if (!validate_guess(input$guess)) {
       renderText({"Invalid input"})
     } else if (guess_num > 5) {
-      renderText({"Only allowed six guesses"})
+      guess_num <<- 0L
+      guesses <<- character(6)
+      soln <<- get_chrs(sample(os, 1))
+      gameOver(FALSE)
+      renderText({paste0("The woRdle was: ", paste(soln, collapse = ""), "; new woRdle generated")})
     } else {
       guess_num <<- guess_num + 1L
       guesses[guess_num] <<- input$guess
