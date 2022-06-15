@@ -101,7 +101,8 @@ ui <- fluidPage(
         span(textOutput("message"), style = "color:#fefeff"),
     column(12, 
            plotOutput("plot")
-        )
+        ),
+    column(12, actionButton("resetButton", "New woRdle"))
       )
     )
   )
@@ -114,6 +115,21 @@ server <- function(input, output) {
   
   gameOver <- reactiveVal(FALSE)
   
+  observeEvent(input$resetButton, {
+    guess_num <<- 0L
+    guesses <<- character(6)
+    prev_soln <- soln
+    soln <<- get_chrs(sample(os, 1))
+    gameOver(FALSE)
+    output$message <- renderText({paste0("The woRdle was: ", paste(prev_soln, collapse = ""), "; new woRdle generated")})
+    output$plot <- renderPlot(bg = black, {
+      par(fin = c(3.5, 4), mar = c(0, 2, 1, 2), col.main = white)
+      plot(rep(1:5, 6), rep(6:1, each = 5), pch = 0, cex = 3.8,
+           main = "woRdle", col = gray,
+           axes = FALSE, xlab = "", ylab = "", xlim = c(0, 6), ylim = c(0.5, 6.5))
+    })
+  })
+  
   guessEvent <- eventReactive(input$guessButton, {
     # validate(
     #   need(validate_guess(input$guess), "Please enter a valid input"),
@@ -125,30 +141,33 @@ server <- function(input, output) {
       soln <<- get_chrs(sample(os, 1))
       gameOver(FALSE)
       renderText({"New woRdle generated"})
-    } else 
-      if (!validate_guess(input$guess)) {
-      renderText({"Invalid input"})
-    } else if (guess_num > 5) {
-      guess_num <<- 0L
-      guesses <<- character(6)
-      soln <<- get_chrs(sample(os, 1))
-      gameOver(FALSE)
-      renderText({paste0("The woRdle was: ", paste(soln, collapse = ""), "; new woRdle generated")})
     } else {
-      guess_num <<- guess_num + 1L
-      guesses[guess_num] <<- input$guess
-      if (all(get_chrs(input$guess) == soln)) {
-        gameOver(TRUE)
-        renderText({paste("Congratulations! You found the woRdle")})
-      } else if (guess_num != 5) {
-        renderText({paste(6L - guess_num, "guesses remaining")})
+      if (guess_num < 6 && !validate_guess(input$guess)) {
+        renderText({"Invalid input"})
       } else {
-        renderText({paste("1 guess remaining")})
+        updateTextInput(inputId = "guess", label = "Enter your guess", value = "")
+        guess_num <<- guess_num + 1L
+        guesses[guess_num] <<- input$guess
+        if (isTRUE(all.equal(get_chrs(input$guess), soln))) {
+          gameOver(TRUE)
+          renderText({paste("Congratulations! You found the woRdle")})
+        } else if (guess_num < 5) {
+          renderText({paste(6L - guess_num, "guesses remaining")})
+        } else if (guess_num == 5) {
+          renderText({paste("1 guess remaining")})
+        } else if (guess_num > 5) {
+          guess_num <<- 6
+          renderText({paste("No guesses remaining; click the 'New woRdle' button for the solution and a new woRdle")})
+        }
       }
     }
   })
   output$plot <- renderPlot(bg = black, {
-    output$message <<- if (input$guessButton != 0) guessEvent() else renderText({"Welcome to woRdle"})
+    output$message <<- if (input$guessButton == 0) {
+      renderText({"Welcome to woRdle"})
+    } else {
+      guessEvent()
+    }
     par(fin = c(3.5, 4), mar = c(0, 2, 1, 2), col.main = white)
     plot(rep(1:5, 6), rep(6:1, each = 5), pch = 0, cex = 3.8,
          main = "woRdle", col = gray,
